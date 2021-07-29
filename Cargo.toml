@@ -1,0 +1,2 @@
+[workspace]
+members = ["indexer-lib", "node-indexer", "node-indexer-test"]
