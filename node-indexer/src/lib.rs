@@ -550,7 +550,7 @@ impl NodeClient {
                     account: ton::lite_server::accountid::AccountId {
                         workchain: address.workchain_id() as i32,
                         id: ton::int256(
-                            ton_types::UInt256::from(address.address().get_bytestring(0)).into(),
+                            ton_types::UInt256::from_be_bytes(&address.address().get_bytestring(0)).into(),
                         ),
                     },
                     lt: from.lt as i64,
