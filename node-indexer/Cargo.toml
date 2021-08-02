@@ -35,6 +35,8 @@ ton_block = { git = "https://github.com/broxus/ton-labs-block.git" }
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
 
 nekoton = { git = "https://github.com/broxus/nekoton.git", default-features = false }
+nekoton-abi = { git = "https://github.com/broxus/nekoton.git" }
+nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
 
 [dependencies.ton_api]
 git = "https://github.com/broxus/ton-labs-tl.git"

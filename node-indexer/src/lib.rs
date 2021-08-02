@@ -7,9 +7,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use bb8::{Pool, PooledConnection};
 use futures::{Sink, SinkExt};
-use nekoton::abi::TransactionId;
+use nekoton_abi::TransactionId;
 use nekoton::transport::models::{ExistingContract, RawContractState, RawTransaction};
-use nekoton::utils::{NoFailure, TrustMe};
+use nekoton_utils::{NoFailure, TrustMe};
 use tiny_adnl::{AdnlTcpClient, AdnlTcpClientConfig};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Barrier, OwnedSemaphorePermit, Semaphore};
@@ -458,7 +458,7 @@ impl NodeClient {
         &self,
         contract_address: MsgAddressInt,
     ) -> Result<nekoton::transport::models::RawContractState> {
-        use nekoton::abi::{GenTimings, LastTransactionId};
+        use nekoton_abi::{GenTimings, LastTransactionId};
 
         let last_block = self.last_block.get_last_block(&self).await?;
         let id = contract_address
@@ -589,8 +589,8 @@ impl NodeClient {
         contract_address: MsgAddressInt,
         function: &ton_abi::Function,
         input: &[ton_abi::Token],
-    ) -> Result<nekoton::abi::ExecutionOutput> {
-        use nekoton::abi::FunctionExt;
+    ) -> Result<nekoton_abi::ExecutionOutput> {
+        use nekoton_abi::FunctionExt;
 
         let state = self.get_contract_state(contract_address).await?;
         let state = match state {
