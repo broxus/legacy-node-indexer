@@ -86,7 +86,7 @@ impl Extractable for Event {
         }
         let mut result = vec![];
         for message in &messages.out_messages {
-            let tokens = match process_event_message(&message, &self) {
+            let tokens = match process_event_message(message, self) {
                 Ok(Some(a)) => a,
                 Ok(None) => continue,
                 Err(e) => {
@@ -113,14 +113,14 @@ impl Extractable for ton_abi::Function {
                 None => return Ok(None),
                 Some(a) => a,
             };
-            process_function_in_message::<BounceHandler>(&message, &self, None)
+            process_function_in_message::<BounceHandler>(message, self, None)
                 .context("Failed processing function in message")?
         } else {
             None
         };
 
         let output = if self.has_output() {
-            process_function_out_messages(&messages.out_messages, &self)
+            process_function_out_messages(&messages.out_messages, self)
                 .context("Failed processing function out messages")?
         } else {
             None
@@ -209,7 +209,7 @@ where
             let bounced = header.bounced;
             (
                 bounced,
-                process_function_in_message(&message, &self.function, self.handler.as_ref())
+                process_function_in_message(message, &self.function, self.handler.as_ref())
                     .context("Failed processing function in message")?,
             )
         } else {

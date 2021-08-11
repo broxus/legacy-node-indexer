@@ -7,8 +7,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use bb8::{Pool, PooledConnection};
 use futures::{Sink, SinkExt};
-use nekoton_abi::TransactionId;
 use nekoton::transport::models::{ExistingContract, RawContractState, RawTransaction};
+use nekoton_abi::TransactionId;
 use nekoton_utils::{NoFailure, TrustMe};
 use tiny_adnl::{AdnlTcpClient, AdnlTcpClientConfig};
 use tokio::sync::mpsc::Sender;
@@ -460,7 +460,7 @@ impl NodeClient {
     ) -> Result<nekoton::transport::models::RawContractState> {
         use nekoton_abi::{GenTimings, LastTransactionId};
 
-        let last_block = self.last_block.get_last_block(&self).await?;
+        let last_block = self.last_block.get_last_block(self).await?;
         let id = contract_address
             .address()
             .get_bytestring(0)
@@ -550,7 +550,8 @@ impl NodeClient {
                     account: ton::lite_server::accountid::AccountId {
                         workchain: address.workchain_id() as i32,
                         id: ton::int256(
-                            ton_types::UInt256::from_be_bytes(&address.address().get_bytestring(0)).into(),
+                            ton_types::UInt256::from_be_bytes(&address.address().get_bytestring(0))
+                                .into(),
                         ),
                     },
                     lt: from.lt as i64,
@@ -605,6 +606,15 @@ impl NodeClient {
             &state.last_transaction_id,
             input,
         )
+    }
+
+    pub async fn get_last_block(&self) -> Result<BlockId> {
+        let ext_id = self.last_block.get_last_block(self).await?;
+        Ok(BlockId {
+            workchain: ext_id.workchain,
+            shard: ext_id.shard,
+            seqno: ext_id.seqno,
+        })
     }
 }
 

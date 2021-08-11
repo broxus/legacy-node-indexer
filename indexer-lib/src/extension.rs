@@ -76,7 +76,7 @@ impl TransactionExt for &Transaction {
     }
 
     fn messages(&self) -> Result<TransactionMessages> {
-        Ok(crate::parse_transaction_messages(&self)?)
+        Ok(crate::parse_transaction_messages(self)?)
     }
 
     fn tx_hash(&self) -> Result<UInt256> {
