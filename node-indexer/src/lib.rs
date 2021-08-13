@@ -9,7 +9,7 @@ use bb8::{Pool, PooledConnection};
 use futures::{Sink, SinkExt};
 use nekoton::transport::models::{ExistingContract, RawContractState, RawTransaction};
 use nekoton_abi::TransactionId;
-use nekoton_utils::{NoFailure, TrustMe};
+use nekoton_utils::TrustMe;
 use tiny_adnl::{AdnlTcpClient, AdnlTcpClientConfig};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Barrier, OwnedSemaphorePermit, Semaphore};
@@ -303,7 +303,6 @@ impl NodeClient {
                 num_of_shards += 1;
                 Ok(true)
             })
-            .convert()
             .context("Failed iterating shards")?;
 
         log::trace!("Num of shards: {}", num_of_shards);

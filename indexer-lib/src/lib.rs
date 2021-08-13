@@ -8,7 +8,7 @@ use ton_block::{
 };
 use ton_types::{SliceData, UInt256};
 
-use nekoton_utils::{NoFailure, TrustMe};
+use nekoton_utils::TrustMe;
 
 pub use crate::extension::TransactionExt;
 
@@ -319,14 +319,11 @@ where
 
     for account_block in account_blocks {
         for item in account_block.transactions().iter() {
-            let (_, data) = item
-                .convert()
-                .context("Failed getting tx data from account block:")?;
+            let (_, data) = item.context("Failed getting tx data from account block:")?;
 
             let cell = data
                 .into_cell()
                 .reference(0)
-                .convert()
                 .context("Failed packing tx data into cell")?;
             let hash = cell.hash(0);
             let transaction = match ton_block::Transaction::construct_from_cell(cell) {

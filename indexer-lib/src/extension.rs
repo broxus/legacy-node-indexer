@@ -1,5 +1,5 @@
-use anyhow::Result;
-use nekoton_utils::{NoFailure, TrustMe};
+use anyhow::{Context, Result};
+use nekoton_utils::TrustMe;
 use ton_block::{CommonMsgInfo, MsgAddressInt, Serializable, Transaction, TransactionDescr};
 use ton_types::UInt256;
 
@@ -8,7 +8,7 @@ use crate::{address_from_account_id, ExtractInput, Extractable, TransactionMessa
 pub trait TransactionExt {
     fn time(&self) -> u32;
     fn contract_address(&self) -> Result<MsgAddressInt>;
-    fn sender_address(&self) -> Result<Option<MsgAddressInt>>;
+    fn sender_address(&self) -> Result<MsgAddressInt>;
     fn messages(&self) -> Result<TransactionMessages>;
     fn tx_hash(&self) -> Result<UInt256>;
     fn success(&self) -> bool;
@@ -25,7 +25,7 @@ impl TransactionExt for Transaction {
         (&self).contract_address()
     }
 
-    fn sender_address(&self) -> Result<Option<MsgAddressInt>> {
+    fn sender_address(&self) -> Result<MsgAddressInt> {
         (&self).sender_address()
     }
 
@@ -64,14 +64,14 @@ impl TransactionExt for &Transaction {
         address_from_account_id(self.account_addr.clone(), wc as i8)
     }
 
-    fn sender_address(&self) -> Result<Option<MsgAddressInt>> {
+    fn sender_address(&self) -> Result<MsgAddressInt> {
         let addr = self
             .in_msg
             .as_ref()
             .ok_or(TransactionExtError::TickTok)?
-            .read_struct()
-            .convert()?
-            .src();
+            .read_struct()?
+            .src()
+            .context("No sender")?;
         Ok(addr)
     }
 
@@ -80,7 +80,7 @@ impl TransactionExt for &Transaction {
     }
 
     fn tx_hash(&self) -> Result<UInt256> {
-        Ok(self.serialize().convert()?.hash(0))
+        Ok(self.serialize()?.hash(0))
     }
     fn success(&self) -> bool {
         let res = self.description.read_struct().map(|x| match x {
@@ -123,7 +123,7 @@ where
         self.transaction.contract_address()
     }
 
-    fn sender_address(&self) -> Result<Option<MsgAddressInt>> {
+    fn sender_address(&self) -> Result<MsgAddressInt> {
         self.transaction.sender_address()
     }
 
@@ -156,7 +156,7 @@ where
         self.transaction.contract_address()
     }
 
-    fn sender_address(&self) -> Result<Option<MsgAddressInt>> {
+    fn sender_address(&self) -> Result<MsgAddressInt> {
         self.transaction.sender_address()
     }
 
