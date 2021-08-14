@@ -1,10 +1,10 @@
-use std::fmt::Debug;
-
+#![warn(clippy::dbg_macro, clippy::print_stdout)]
 use anyhow::{Context, Result};
+use std::fmt::Debug;
 use ton_abi::{Event, Function, Token};
 use ton_block::{
-    AccountBlock, CurrencyCollection, Deserializable, GetRepresentationHash, MsgAddressInt,
-    Serializable, Transaction,
+    AccountBlock, CommonMsgInfo, CurrencyCollection, Deserializable, GetRepresentationHash,
+    MsgAddressInt, Serializable, Transaction,
 };
 use ton_types::{SliceData, UInt256};
 
@@ -202,11 +202,11 @@ where
                 None => return Ok(None),
                 Some(a) => a,
             };
-            let header = match message.msg.int_header().context("No header") {
-                Ok(a) => a,
-                Err(_) => return Ok(None),
+            let bounced = match message.msg.header() {
+                CommonMsgInfo::IntMsgInfo(a) => a.bounced,
+                CommonMsgInfo::ExtInMsgInfo(_) => false,
+                CommonMsgInfo::ExtOutMsgInfo(_) => return Ok(None),
             };
-            let bounced = header.bounced;
             (
                 bounced,
                 process_function_in_message(message, &self.function, self.handler.as_ref())
@@ -413,11 +413,11 @@ where
 {
     let mut input = None;
     let MessageData { msg, .. } = msg;
-    let header = match msg.int_header().context("No header") {
-        Ok(a) => a,
-        Err(_) => return Ok(None),
+    let bounced = match msg.header() {
+        CommonMsgInfo::IntMsgInfo(a) => a.bounced,
+        CommonMsgInfo::ExtInMsgInfo(_) => false,
+        CommonMsgInfo::ExtOutMsgInfo(_) => return Ok(None),
     };
-    let bounced = header.bounced;
     let is_internal = msg.is_internal();
     let body = match msg.body() {
         None => return Ok(None),
@@ -552,12 +552,11 @@ pub enum AbiError {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
-    use nekoton_utils::NoFailure;
-    use ton_abi::{Token, TokenValue, Uint};
-    use ton_block::{Deserializable, GetRepresentationHash, Transaction};
+    use ton_abi::{Function, Token, TokenValue, Uint};
+    use ton_block::{Deserializable, GetRepresentationHash, Message, Transaction};
     use ton_types::SliceData;
 
-    use crate::{ExtractInput, FunctionOpts, TransactionExt};
+    use crate::{BounceHandler, ExtractInput, FunctionOpts, MessageData, TransactionExt};
 
     const DEX_ABI: &str = r#"
     {
@@ -1310,8 +1309,8 @@ mod test {
     }
 
     fn bounce_handler(mut data: SliceData) -> Result<Vec<Token>> {
-        let _id = data.get_next_u32().convert()?;
-        let token = data.get_next_u128().convert()?;
+        let _id = data.get_next_u32()?;
+        let token = data.get_next_u128()?;
         Ok(vec![Token::new(
             "amount",
             TokenValue::Uint(Uint::new(token, 128)),
@@ -1364,5 +1363,24 @@ mod test {
         };
         let res = input.process().unwrap().unwrap();
         assert!(res.output[0].is_outgoing);
+    }
+
+    #[test]
+    fn test_external() {
+        dbg!();
+        let msg = "te6ccgECDQEAAxwAA7V+L5yrhOvwEIynP2iXeJzXNzNuPXg32o3TdwCabRlGElAAAM6/GWMYHxGT+tSAYNeC0QUcA9VogFuMADD2Or+jwwqEse0X0fwwAADOvjddxBYKPiNQADR+BOvIBQQBAhEMgLZGHbzABEADAgBvyZBpLEwrwvQAAAAAAAIAAAAAAAOUYKFEOgUzFlK6AmVlNh2GzZjS5Qwo7iAhhn7rzot6aEDQM8QAnUXgAxOIAAAAAAAAAABSwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAgnIvBEUqwmqKp7haJflp2v/CuAYkBc3kFthEYHNlGQCPclYmhaXavtui0cXF4NpYeyU2xG60GRpjdEhxvTSEDsY0AgHgCQYBAd8HAbFoAcXzlXCdfgIRlOftEu8TmubmbcevBvtRum7gE02jKMJLABDOUEYw7fJjHzxO1VkjOYm0Ls9m1Ft/AGoGWUkcx7oqkF9eEAAGK8M2AAAZ1+MsYwTBR8RqwAgB7RjSFwIAAAAAAAAAAAAAAAAAAAPowfY0Pk/VmQLDWew5qkVE89jILyf/7NlnKJMO16QsJcqAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQA4vnKuE6/AQjKc/aJd4nNc3M249eDfajdN3AJptGUYSVDAFFiAHF85VwnX4CEZTn7RLvE5rm5m3Hrwb7Ubpu4BNNoyjCSgwKAeGVfzpnl8z86XzLyPBJ56TVTUyVU9lsecOM555coJeK43c4+Qsu0yOcsmCDDGnEGKxvKQLgjjRJxBzwKvqU1ZyC8H2ND5P1ZkCw1nsOapFRPPYyC8n/+zZZyiTDtekLCXKAAABeYArlCJgo+KqS/Fg4oAsBxYAIZygjGHb5MY+eJ2qskZzE2hdns2otv4A1AyykjmPdFUAAAAAAAAAAAAAAAAAAAH0AAAAAAAAAAAAAAAAC+vCAEAOL5yrhOvwEIynP2iXeJzXNzNuPXg32o3TdwCabRlGElQwAAA==";
+        let fun = ton_abi::contract::Contract::load(std::io::Cursor::new(TOKEN_WALLET))
+            .unwrap()
+            .functions()["internalTransfer"]
+            .clone();
+        let mut fun = FunctionOpts::<BounceHandler>::from(fun);
+        fun.match_outgoing = true;
+        let tx = Transaction::construct_from_base64(msg).unwrap();
+        let input = ExtractInput {
+            transaction: &tx,
+            hash: tx.hash().unwrap(),
+            what_to_extract: &[fun],
+        };
+        let res = input.process().unwrap().unwrap();
     }
 }
