@@ -1,14 +1,15 @@
 #![warn(clippy::dbg_macro, clippy::print_stdout)]
-use anyhow::{Context, Result};
+
 use std::fmt::Debug;
+
+use anyhow::{Context, Result};
+use nekoton_utils::TrustMe;
 use ton_abi::{Event, Function, Token};
 use ton_block::{
     AccountBlock, CommonMsgInfo, CurrencyCollection, Deserializable, GetRepresentationHash,
     MsgAddressInt, Serializable, Transaction,
 };
 use ton_types::{SliceData, UInt256};
-
-use nekoton_utils::TrustMe;
 
 pub use crate::extension::TransactionExt;
 
@@ -280,20 +281,11 @@ fn process_outgoing_messages(
     Ok(None)
 }
 
-/// # Returns
-/// Ok `Some` if block has account block
-pub fn extract_from_block<W, O>(
+pub fn block_transactions_iterator(
     block: &ton_block::Block,
-    what_to_extract: &[W],
-) -> Result<Vec<ParsedOutput<O>>>
-where
-    W: Extractable + Extractable<Output = O>,
-    O: Clone + Debug,
-{
+) -> Result<Option<impl Iterator<Item = (UInt256, ton_block::Transaction)>>> {
     use ton_types::HashmapType;
-    let mut result = vec![];
 
-    // parsing account blocks from generic blocks according to `HashMapAugType::dump`
     let account_blocks = match block
         .extra
         .read_struct()
@@ -314,40 +306,55 @@ where
             account_blocks
         }) {
         Ok(account_blocks) => account_blocks,
-        _ => return Ok(result), // no account blocks found
+        _ => return Ok(None), // no account blocks found
+    };
+    let iter = account_blocks
+        .into_iter()
+        .flat_map(|x| x.transactions().iter().flat_map(|x| x.ok()))
+        .filter_map(|item| {
+            let (_, data) = item;
+            let cell = data.into_cell().reference(0).ok()?;
+            let hash = cell.hash(0);
+            let transaction = (
+                hash,
+                ton_block::Transaction::construct_from_cell(cell).ok()?,
+            );
+            Some(transaction)
+        });
+    Ok(Some(iter))
+}
+
+/// # Returns
+/// Ok `Some` if block has account block
+pub fn extract_from_block<W, O>(
+    block: &ton_block::Block,
+    what_to_extract: &[W],
+) -> Result<Vec<ParsedOutput<O>>>
+where
+    W: Extractable + Extractable<Output = O>,
+    O: Clone + Debug,
+{
+    let mut result = vec![];
+    let transactions = match block_transactions_iterator(block)? {
+        None => return Ok(result),
+        Some(a) => a,
     };
 
-    for account_block in account_blocks {
-        for item in account_block.transactions().iter() {
-            let (_, data) = item.context("Failed getting tx data from account block:")?;
-
-            let cell = data
-                .into_cell()
-                .reference(0)
-                .context("Failed packing tx data into cell")?;
-            let hash = cell.hash(0);
-            let transaction = match ton_block::Transaction::construct_from_cell(cell) {
-                Ok(transaction) => transaction,
-                Err(e) => {
-                    log::error!("Failed creating transaction from cell: {}", e);
-                    continue;
-                }
-            };
-            let input = ExtractInput {
-                transaction: &transaction,
-                hash,
-                what_to_extract,
-            };
-            let extracted_values = match input.process() {
-                Ok(Some(a)) => a,
-                Ok(None) => continue,
-                Err(e) => {
-                    log::error!("Failed parsing transaction: {}", e);
-                    continue;
-                }
-            };
-            result.push(extracted_values);
-        }
+    for transaction in transactions {
+        let input = ExtractInput {
+            transaction: &transaction.1,
+            hash: transaction.0,
+            what_to_extract,
+        };
+        let extracted_values = match input.process() {
+            Ok(Some(a)) => a,
+            Ok(None) => continue,
+            Err(e) => {
+                log::error!("Failed parsing transaction: {}", e);
+                continue;
+            }
+        };
+        result.push(extracted_values);
     }
     Ok(result)
 }
