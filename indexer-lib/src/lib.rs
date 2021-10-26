@@ -139,6 +139,7 @@ impl Extractable for ton_abi::Function {
     }
 }
 
+#[derive(Clone)]
 pub enum AnyExtractable {
     Function(ton_abi::Function),
     Event(ton_abi::Event),
@@ -149,6 +150,19 @@ pub enum AnyExtractableOutput {
     Function(ParsedFunction),
     Event(ParsedEvent),
 }
+
+pub fn split(input: Vec<AnyExtractableOutput>) -> (Vec<ParsedFunction>, Vec<ParsedEvent>) {
+    let mut functions = Vec::new();
+    let mut events = Vec::new();
+    for inpt in input {
+        match inpt {
+            AnyExtractableOutput::Function(f) => functions.push(f),
+            AnyExtractableOutput::Event(e) => events.push(e),
+        }
+    }
+    (functions, events)
+}
+
 impl Extractable for AnyExtractable {
     type Output = AnyExtractableOutput;
 
