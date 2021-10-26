@@ -139,6 +139,38 @@ impl Extractable for ton_abi::Function {
     }
 }
 
+pub enum AnyExtractable {
+    Function(ton_abi::Function),
+    Event(ton_abi::Event),
+}
+
+#[derive(Debug, Clone)]
+pub enum AnyExtractableOutput {
+    Function(ParsedFunction),
+    Event(ParsedEvent),
+}
+impl Extractable for AnyExtractable {
+    type Output = AnyExtractableOutput;
+
+    fn extract(&self, messages: &TransactionMessages) -> Result<Option<Vec<Self::Output>>> {
+        let res = match self {
+            AnyExtractable::Function(fun) => {
+                let res = fun.extract(messages)?;
+                res.map(|x| x.into_iter().map(AnyExtractableOutput::Function).collect())
+            }
+            AnyExtractable::Event(event) => {
+                let res = event.extract(messages)?;
+                res.map(|x| x.into_iter().map(AnyExtractableOutput::Event).collect())
+            }
+        };
+        Ok(res)
+    }
+
+    fn should_continue() -> bool {
+        true
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ParsedFunction {
     pub function_name: String,

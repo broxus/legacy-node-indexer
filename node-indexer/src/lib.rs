@@ -9,7 +9,7 @@ use bb8::{Pool, PooledConnection};
 use futures::{Sink, SinkExt};
 use nekoton::transport::models::{ExistingContract, RawContractState, RawTransaction};
 use nekoton_abi::TransactionId;
-use nekoton_utils::TrustMe;
+use nekoton_utils::{SimpleClock, TrustMe};
 use tiny_adnl::{AdnlTcpClient, AdnlTcpClientConfig};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Barrier, OwnedSemaphorePermit, Semaphore};
@@ -600,8 +600,8 @@ impl NodeClient {
             RawContractState::Exists(a) => a,
         };
         function.clone().run_local(
+            &SimpleClock,
             state.account,
-            state.timings,
             &state.last_transaction_id,
             input,
         )
