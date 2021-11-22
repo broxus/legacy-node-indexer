@@ -97,6 +97,7 @@ impl Extractable for Event {
             };
             result.push(ParsedEvent {
                 function_name: self.name.clone(),
+                event_id: self.get_function_id(),
                 input: tokens.tokens,
                 message_hash: hash(message),
             });
@@ -133,6 +134,7 @@ impl Extractable for ton_abi::Function {
         }
         Ok(Some(vec![ParsedFunction {
             function_name: self.name.clone(),
+            function_id: self.get_function_id(),
             input,
             output,
         }]))
@@ -188,6 +190,7 @@ impl Extractable for AnyExtractable {
 #[derive(Debug, Clone)]
 pub struct ParsedFunction {
     pub function_name: String,
+    pub function_id: u32,
     pub input: Option<ParsedMessage>,
     pub output: Option<ParsedMessage>,
 }
@@ -195,6 +198,7 @@ pub struct ParsedFunction {
 #[derive(Debug, Clone)]
 pub struct ParsedEvent {
     pub function_name: String,
+    pub event_id: u32,
     pub input: Vec<ton_abi::Token>,
     pub message_hash: [u8; 32],
 }
