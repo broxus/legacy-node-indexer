@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use nekoton_utils::TrustMe;
-use ton_block::{CommonMsgInfo, MsgAddressInt, Serializable, Transaction, TransactionDescr};
+use ton_block::GetRepresentationHash;
+use ton_block::{CommonMsgInfo, MsgAddressInt, Transaction, TransactionDescr};
 use ton_types::UInt256;
 
 use crate::{address_from_account_id, ExtractInput, Extractable, TransactionMessages};
@@ -80,7 +81,7 @@ impl TransactionExt for &Transaction {
     }
 
     fn tx_hash(&self) -> Result<UInt256> {
-        Ok(self.serialize()?.hash(0))
+        self.hash()
     }
     fn success(&self) -> bool {
         let res = self.description.read_struct().map(|x| match x {
