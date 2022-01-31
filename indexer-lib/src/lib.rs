@@ -423,7 +423,6 @@ pub fn address_from_account_id(address: SliceData, workchain_id: i8) -> Result<M
 #[derive(Debug, Clone)]
 struct ProcessFunctionOutput {
     tokens: Vec<ton_abi::Token>,
-    time: u32,
 }
 
 fn process_function_out_messages(
@@ -517,7 +516,7 @@ fn process_event_message(
     abi_function: &ton_abi::Event,
 ) -> Result<Option<ProcessFunctionOutput>, AbiError> {
     let mut input = None;
-    let MessageData { time, msg } = msg;
+    let MessageData { msg, .. } = msg;
 
     if !matches!(msg.header(), ton_block::CommonMsgInfo::ExtOutMsgInfo(_)) {
         return Ok(None);
@@ -541,10 +540,7 @@ fn process_event_message(
     }
 
     match input {
-        Some(a) => Ok(Some(ProcessFunctionOutput {
-            tokens: a,
-            time: *time,
-        })),
+        Some(a) => Ok(Some(ProcessFunctionOutput { tokens: a })),
         _ => Ok(None),
     }
 }

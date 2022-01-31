@@ -1,6 +1,6 @@
 [package]
 name = "indexer-lib"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Vladimir Petrzhikovskiy <v.petrzhikovskiy@dexpa.io>"]
 edition = "2018"
 
@@ -14,7 +14,7 @@ ton_abi = { git = "https://github.com/broxus/ton-labs-abi" }
 ton_block = { git = "https://github.com/broxus/ton-labs-block.git" }
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
 
-nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
+nekoton-utils = { git = "https://github.com/broxus/nekoton.git",branch='feature/new-tip3' }
 
 [dev-dependencies]
 env_logger = "0.9.0"
