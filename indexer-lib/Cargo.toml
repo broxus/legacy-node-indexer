@@ -14,7 +14,7 @@ ton_abi = { git = "https://github.com/broxus/ton-labs-abi" }
 ton_block = { git = "https://github.com/broxus/ton-labs-block.git" }
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
 
-nekoton-utils = { git = "https://github.com/broxus/nekoton.git",branch='feature/new-tip3' }
+nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
 
 [dev-dependencies]
 env_logger = "0.9.0"
